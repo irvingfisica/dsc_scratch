@@ -1,19 +1,36 @@
+use std::collections::HashMap;
+
+//Estructura básica de nodo en la red
 #[derive(Debug)]
-struct  Datero {
+struct  Nodo {
     id: usize,
     name: String,
-    friends: Vec<usize>,
+    neighbours: Vec<usize>,
 }
 
-impl Datero {
-    fn number_of_friends(&self) -> i32 {
-        self.friends.len() as i32
+//Funciones agregadas al nodo
+impl Nodo {
+    fn number_of_links(&self) -> i32 {
+        self.neighbours.len() as i32
+    }
+
+    fn neighbours_2lev(&self,red:&HashMap<usize,Nodo>) -> HashMap<usize,usize> {
+        let mut neighs_of_neigh:HashMap<usize,usize> = HashMap::new();
+        for neighbour in &self.neighbours{
+            if let Some(x) = red.get(neighbour) {
+                for neigh in &x.neighbours{
+                    if neigh != &self.id && !self.neighbours.contains(neigh) {
+                        *neighs_of_neigh.entry(*neigh).or_insert(0) += 1;
+                    }
+                }
+            }
+        };
+        neighs_of_neigh
     }
 }
 
-
 fn main() {
-
+    //Nodos iniciales
     let usuarios = [
         "Hero",
         "Dunn",
@@ -25,42 +42,64 @@ fn main() {
         "Devin",
         "Kate",
         "Klein",
+        "Hellen",
     ];
 
-    let friendships:[(usize,usize);12] = [(0,1),(0,2),(1,2),(1,3),(2,3),(3,4),(4,5),(5,6),(5,7),(6,8),(7,8),(8,9)];
+    //Enlaces iniciales
+    let relationships:[(usize,usize);12] = [(0,1),(0,2),(1,2),(1,3),(2,3),(3,4),(4,5),(5,6),(5,7),(6,8),(7,8),(8,9)];
 
-    let mut users: Vec<Datero> = Vec::new(); 
+    //Creación de la red
+    let mut red: HashMap<usize,Nodo> = HashMap::new();
 
     for (i,usuario) in usuarios.iter().enumerate() {
-        users.push(Datero {
-            id: i,
-            name: usuario.to_string(),
-            friends: vec![],
-        });
+
+        red.entry(i)
+            .or_insert(Nodo {
+                id: i,
+                name: usuario.to_string(),
+                neighbours: vec![],
+            });
+
     }
 
-    for (i,j) in friendships.iter() {
-        users[*i].friends.push(*j);
-        users[*j].friends.push(*i);
+    for (i,j) in relationships.iter() {
+
+        if let Some(x) = red.get_mut(i) {
+            x.neighbours.push(*j);
+        }
+
+        if let Some(x) = red.get_mut(j) {
+            x.neighbours.push(*i);
+        }
+
     }
 
+    println!("{:?}",red);
+
+    //Número total de enlaces y número de enlaces promedio
     let mut suma = 0;
-    for usuario in users.iter(){
-        suma += usuario.number_of_friends();
+    for (_,usuario) in red.iter(){
+        suma += usuario.number_of_links();
     }
 
-    println!("El número total de conecciones es {}", suma);
-    println!("El promedio de conecciones es {}", suma as f64 / users.len() as f64);
+    println!("El número total de enlaces es {}", suma);
+    println!("El promedio de enlaces es {}", suma as f64 / red.len() as f64);
 
-    let mut num_friends_by_id = Vec::new();
+    //Número de enlaces por ID
+    let mut num_links_by_id = Vec::new();
 
-    for usuario in users.iter(){
-        num_friends_by_id.push((usuario.id,usuario.number_of_friends()))
+    for (llave,usuario) in red.iter(){
+        num_links_by_id.push((llave,usuario.number_of_links()))
     }
     
-    println!("{:?}",num_friends_by_id);
+    println!("{:?}",num_links_by_id);
 
-    num_friends_by_id.sort_by(|a,b| b.1.cmp(&a.1));
+    //Ordenados de mayor a menor número de enlaces
+    num_links_by_id.sort_by(|a,b| b.1.cmp(&a.1));
 
-    println!("{:?}",num_friends_by_id);
+    println!("{:?}",num_links_by_id);
+
+    if let Some(x) = red.get(&3) {
+        println!("{:?}",x.neighbours_2lev(&red));
+    }
 }
